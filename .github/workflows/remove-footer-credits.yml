@@ -69,4 +69,4 @@ jobs:
           git add ucode/template/themes/argon/footer.ut
           git add ucode/template/themes/argon/footer_login.ut
           git commit -m "chore: remove argon theme credit from footer" || echo "No changes to commit"
-          git push origin HEAD:main
+          git push origin HEAD:master
