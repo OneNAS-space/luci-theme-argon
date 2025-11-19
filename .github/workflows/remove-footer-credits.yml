@@ -1,0 +1,72 @@
+name: Remove Footer Credits
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'ucode/template/themes/argon/footer.ut'
+      - 'ucode/template/themes/argon/footer_login.ut'
+  pull_request:
+    paths:
+      - 'ucode/template/themes/argon/footer.ut'
+      - 'ucode/template/themes/argon/footer_login.ut'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Remove Footer Credits
+        id: modify
+        run: |
+          set -e
+          f1="ucode/template/themes/argon/footer.ut"
+          f2="ucode/template/themes/argon/footer_login.ut"
+
+          if [ ! -f "$f1" ] || [ ! -f "$f2" ]; then
+            echo "Target files not found."
+            exit 1
+          fi
+
+          before=$(cat "$f1" "$f2" | md5sum | cut -d' ' -f1)
+
+          perl -0777 -pi -e 's/\s*<span class="footer-separator">\|<\/span>\s*<a href="https:\/\/github\.com\/jerrykuku\/luci-theme-argon"[^>]*>.*?<\/a>//s' "$f1"
+
+          sed -i '\#ArgonTheme {# vPKG_VERSION #}#d' "$f2"
+          
+          after=$(cat "$f1" "$f2" | md5sum | cut -d' ' -f1)
+          
+          echo "before=$before" >> $GITHUB_OUTPUT
+          echo "after=$after" >> $GITHUB_OUTPUT
+
+          if [ "$before" = "$after" ]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes were needed"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Changes applied."
+          fi
+
+      - name: Show git diff
+        if: steps.modify.outputs.changed == 'true'
+        run: git --no-pager diff --color
+
+      - name: Commit and push changes
+        if: steps.modify.outputs.changed == 'true'
+        run: |
+          git add ucode/template/themes/argon/footer.ut
+          git add ucode/template/themes/argon/footer_login.ut
+          git commit -m "chore: remove argon theme credit from footer" || echo "No changes to commit"
+          git push origin HEAD:main
