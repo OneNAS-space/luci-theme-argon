@@ -164,7 +164,7 @@ jobs:
           
           find ./out -type f -name "*.ipk" | while read -r f; do
             base=$(basename "$f")
-            pkgname=$(echo "$base" | sed -E 's/^([a-zA-Z0-9\-_]+)_.*$/\1/')
+            pkgname=$(echo "$base" | sed -E 's/^([^_]+)_.*$/\1/')
             echo "Cleaning old versions of $pkgname"
             rm -f custom-packages/luci/${pkgname}_*.ipk
             cp "$f" custom-packages/luci/
