@@ -1,4 +1,4 @@
-name: Remove Footer Credits
+name: Apply Theme Modifications
 
 on:
   workflow_dispatch:
@@ -6,10 +6,12 @@ on:
     paths:
       - 'ucode/template/themes/argon/footer.ut'
       - 'ucode/template/themes/argon/footer_login.ut'
+      - 'htdocs/luci-static/argon/css/cascade.css'
   pull_request:
     paths:
       - 'ucode/template/themes/argon/footer.ut'
       - 'ucode/template/themes/argon/footer_login.ut'
+      - 'htdocs/luci-static/argon/css/cascade.css'
 
 permissions:
   contents: write
@@ -28,8 +30,36 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      - name: Modify Brand Font Size with Perl
+        id: modify_css
+        run: |
+          set -e
+          css_file="htdocs/luci-static/argon/css/cascade.css"
+          
+          if [ ! -f "$css_file" ]; then
+            echo "CSS file ($css_file) not found."
+            exit 1
+          fi
+
+          before=$(cat "$css_file" | md5sum | cut -d' ' -f1)
+
+          perl -0777 -pi -e 's/(font-size:)1\.8rem;/\11\.5rem;/s' "$css_file"
+          
+          after=$(cat "$css_file" | md5sum | cut -d' ' -f1)
+          
+          echo "before=$before" >> $GITHUB_OUTPUT
+          echo "after=$after" >> $GITHUB_OUTPUT
+
+          if [ "$before" = "$after" ]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No CSS changes were needed"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "CSS font size changed from 1.8rem to 1.5rem using Perl."
+          fi
+
       - name: Remove Footer Credits
-        id: modify
+        id: modify_footer
         run: |
           set -e
           f1="ucode/template/themes/argon/footer.ut"
@@ -60,13 +90,18 @@ jobs:
           fi
 
       - name: Show git diff
-        if: steps.modify.outputs.changed == 'true'
+        if: steps.modify_css.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true'
         run: git --no-pager diff --color
 
       - name: Commit and push changes
-        if: steps.modify.outputs.changed == 'true'
+        if: steps.modify_css.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true'
         run: |
-          git add ucode/template/themes/argon/footer.ut
-          git add ucode/template/themes/argon/footer_login.ut
-          git commit -m "chore: remove argon theme credit from footer" || echo "No changes to commit"
+          if [ "${{ steps.modify_footer.outputs.changed }}" == "true" ]; then
+            git add ucode/template/themes/argon/footer.ut
+            git add ucode/template/themes/argon/footer_login.ut
+          fi
+          if [ "${{ steps.modify_css.outputs.changed }}" == "true" ]; then
+            git add htdocs/luci-static/argon/css/cascade.css
+          fi
+          git commit -m "chore: Apply theme modifications" || echo "No changes to commit"
           git push origin HEAD:master
