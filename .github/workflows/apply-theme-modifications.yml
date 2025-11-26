@@ -43,7 +43,7 @@ jobs:
 
           before=$(cat "$css_file" | md5sum | cut -d' ' -f1)
 
-          perl -0777 -pi -e 's/(font-size:)1\.8rem;/\11\.5rem;/s' "$css_file"
+          perl -0777 -pi -e 's/(font-size:)1\.8rem;/${1}1\.5rem;/s' "$css_file"
           
           after=$(cat "$css_file" | md5sum | cut -d' ' -f1)
           
