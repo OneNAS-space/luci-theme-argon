@@ -43,7 +43,7 @@ jobs:
 
           before=$(cat "$less_file" | md5sum | cut -d' ' -f1)
 
-          perl -0777 -pi -e 's/(\.sidenav-header\s*\{.*?\.brand\s*\{.*?font-size:\s*)1\.8rem;/\11\.5rem;/s' "$less_file"
+          perl -0777 -pi -e 's/(\.sidenav-header\s*\{.*?\.brand\s*\{.*?font-size:\s*)1\.8rem;/${1}1\.5rem;/s' "$less_file"
           
           after=$(cat "$less_file" | md5sum | cut -d' ' -f1)
           
