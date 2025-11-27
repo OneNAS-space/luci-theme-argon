@@ -123,16 +123,16 @@ jobs:
 
           # git clone -b master https://github.com/${{ github.repository }}.git package/downloads/luci-theme-argon
           ./scripts/feeds update -a
-          echo "CONFIG_PACKAGE_${{ env.PKG_DIR_NAME }}=m" >> .config
-          # ./scripts/feeds install luci-base
-          ./scripts/feeds install -d n ${{ env.PKG_DIR_NAME }}
+          # echo "CONFIG_PACKAGE_${{ env.PKG_DIR_NAME }}=m" >> .config
+          ./scripts/feeds install luci-base
+          # ./scripts/feeds install -d n ${{ env.PKG_DIR_NAME }}
           make download -j$(nproc)
 
       - name: Configure Argon (master)
         run: |
           set -eux
           cd "$SDK_DIR"
-          ./scripts/feeds install ${{ env.PKG_DIR_NAME }}
+          # ./scripts/feeds install ${{ env.PKG_DIR_NAME }}
           echo "CONFIG_ALL_NONSHARED=n" > .config
           echo "CONFIG_ALL_KMODS=n" >> .config
           echo "CONFIG_ALL=n" >> .config
