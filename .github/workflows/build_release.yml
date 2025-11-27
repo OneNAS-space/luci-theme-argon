@@ -119,10 +119,11 @@ jobs:
           echo "src-git-full packages https://github.com/openwrt/packages.git;master" >> feeds.conf
           echo "src-git-full luci https://github.com/openwrt/luci.git;master" >> feeds.conf
           echo "src-git-full routing https://git.openwrt.org/feed/routing.git;master" >> feeds.conf
-          
+
           ./scripts/feeds update -a
-          ./scripts/feeds install luci-base 
-          ./scripts/feeds install ${{ env.PKG_DIR_NAME }}
+          echo "CONFIG_PACKAGE_${{ env.PKG_DIR_NAME }}=m" >> .config
+          # ./scripts/feeds install luci-base
+          ./scripts/feeds install -d n ${{ env.PKG_DIR_NAME }}
           
           make download -j$(nproc)
 
@@ -130,6 +131,7 @@ jobs:
         run: |
           set -eux
           cd "$SDK_DIR"
+          ./scripts/feeds install ${{ env.PKG_DIR_NAME }}
           echo "CONFIG_ALL_NONSHARED=n" > .config
           echo "CONFIG_ALL_KMODS=n" >> .config
           echo "CONFIG_ALL=n" >> .config
