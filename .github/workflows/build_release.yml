@@ -1,6 +1,6 @@
 permissions:
   contents: write
-name: Build Argon Package
+name: Auto Build luci-theme-argon
 
 on:
   push:
