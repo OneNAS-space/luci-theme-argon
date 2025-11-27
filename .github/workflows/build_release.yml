@@ -21,6 +21,10 @@ on:
       - "Makefile"
 env:
   TZ: Asia/Shanghai
+  RELEASE: 24.10.4
+  TARGET: x86
+  SUBTARGET: 64
+  PKG_DIR_NAME: luci-theme-argon
 
 jobs:
   job_check:
@@ -80,51 +84,68 @@ jobs:
           sudo -E apt-get -qq autoremove --purge
           sudo -E apt-get -qq clean
 
-#      - name: Cache openwrt SDK
-#        id: cache-sdk
-#        uses: actions/cache@v4
-#        with:
-#          path: sdk
-#          key: openwrt-sdk-24.10.4-x86-64
+      - name: Cache SDK tarball
+        uses: actions/cache@v4
+        with:
+          path: _sdk/sdk.tar.zst
+          key: sdk-${{ env.RELEASE }}-${{ env.TARGET }}-${{ env.SUBTARGET }}
 
-      - name: Initialization environment
-        if: steps.cache-sdk.outputs.cache-hit != 'true'
-        env:
-          url_sdk: https://downloads.openwrt.org/releases/24.10.4/targets/x86/64/openwrt-sdk-24.10.4-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+      - name: Download and extract SDK
         run: |
-          wget ${{ env.url_sdk }}
-          file_name=$(echo ${{env.url_sdk}} | awk -F/ '{print $NF}')
-          mkdir sdk && tar --zstd -xvf $file_name -C ./sdk --strip-components=1
-          cd sdk
+          set -eux
+          BASE="https://downloads.openwrt.org/releases/${RELEASE}/targets/${TARGET}/${SUBTARGET}/"
+          if [ ! -f _sdk/sdk.tar.zst ]; then
+            SDK_TARBALL=$(curl -fsSL "$BASE" | grep -o 'openwrt-sdk-[^"]*\.tar\.zst' | head -n1)
+            mkdir -p _sdk
+            wget -q "${BASE}${SDK_TARBALL}" -O _sdk/sdk.tar.zst
+          fi
+          tar --zstd -xf _sdk/sdk.tar.zst -C _sdk
+          SDK_DIR="$(find "$PWD/_sdk" -maxdepth 1 -type d -name 'openwrt-sdk-*' -print -quit)"
+          echo "SDK_DIR=${SDK_DIR}" >> "$GITHUB_ENV"
+
+      - name: Copy package into SDK
+        run: |
+          cd "$SDK_DIR"
+          mkdir -p package/${PKG_DIR_NAME}
+          rsync -a --delete "$GITHUB_WORKSPACE/" "package/${PKG_DIR_NAME}/" \
+            --exclude '.git' --exclude '.github' --exclude '_sdk' --exclude 'out'
+
+      - name: Initialize and update feeds
+        run: |
+          set -eux
+          cd "$SDK_DIR"
+          
           echo "src-git base https://github.com/openwrt/openwrt.git;main" > feeds.conf
           echo "src-git-full packages https://github.com/openwrt/packages.git;master" >> feeds.conf
           echo "src-git-full luci https://github.com/openwrt/luci.git;master" >> feeds.conf
-          echo "src-git-full routing https://git.openwrt.org/feed/routing.git;master"  >> feeds.conf
-          git clone -b master https://github.com/${{ github.repository }}.git package/downloads/luci-theme-argon
+          echo "src-git-full routing https://git.openwrt.org/feed/routing.git;master" >> feeds.conf
+          
           ./scripts/feeds update -a
-          echo "CONFIG_PACKAGE_luci-theme-argon=m" > .config
-          ./scripts/feeds install -d n luci-theme-argon
-          make download -j8
+          ./scripts/feeds install luci-base 
+          ./scripts/feeds install ${{ env.PKG_DIR_NAME }}
+          
+          make download -j$(nproc)
 
       - name: Configure Argon (master)
         run: |
-          cd sdk
-          ./scripts/feeds install luci-theme-argon
+          set -eux
+          cd "$SDK_DIR"
           echo "CONFIG_ALL_NONSHARED=n" > .config
           echo "CONFIG_ALL_KMODS=n" >> .config
           echo "CONFIG_ALL=n" >> .config
           echo "CONFIG_AUTOREMOVE=n" >> .config
           echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
-          echo "CONFIG_PACKAGE_luci-theme-argon=m" >> .config
+          echo "CONFIG_PACKAGE_${{ env.PKG_DIR_NAME }}=m" >> .config
           make defconfig
 
       - name: Compile Argon (master)
         id: compile
         run: |
-          cd sdk
+          set -eux
+          cd "$SDK_DIR"
           echo "make package/luci-theme-argon/{clean,compile} -j$(nproc)"
-          make package/luci-theme-argon/{clean,compile} -j$(nproc)
-          mv bin/packages/x86_64/base/ ../
+          make package/${{ env.PKG_DIR_NAME }}/{clean,compile} -j$(nproc)
+          mv bin/packages/${{ env.TARGET }}/${{ env.SUBTARGET }}/base/ ../
           rm .config .config.old
           cd ..
           echo "status=success" >> $GITHUB_OUTPUT
