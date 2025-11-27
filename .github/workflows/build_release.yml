@@ -96,12 +96,11 @@ jobs:
           file_name=$(echo ${{env.url_sdk}} | awk -F/ '{print $NF}')
           mkdir sdk && tar --zstd -xvf $file_name -C ./sdk --strip-components=1
           cd sdk
-          mkdir -p package/luci-theme-argon
-          cp -r $GITHUB_WORKSPACE/* package/luci-theme-argon/
           echo "src-git base https://github.com/openwrt/openwrt.git;main" > feeds.conf
           echo "src-git-full packages https://github.com/openwrt/packages.git;master" >> feeds.conf
           echo "src-git-full luci https://github.com/openwrt/luci.git;master" >> feeds.conf
           echo "src-git-full routing https://git.openwrt.org/feed/routing.git;master"  >> feeds.conf
+          git clone -b master https://github.com/${{ github.repository }}.git package/downloads/luci-theme-argon
           ./scripts/feeds update -a
           echo "CONFIG_PACKAGE_luci-theme-argon=m" > .config
           ./scripts/feeds install -d n luci-theme-argon
@@ -110,7 +109,7 @@ jobs:
       - name: Configure Argon (master)
         run: |
           cd sdk
-          # ./scripts/feeds install luci-theme-argon
+          ./scripts/feeds install luci-theme-argon
           echo "CONFIG_ALL_NONSHARED=n" > .config
           echo "CONFIG_ALL_KMODS=n" >> .config
           echo "CONFIG_ALL=n" >> .config
