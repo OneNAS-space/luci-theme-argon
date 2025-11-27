@@ -1,154 +1,124 @@
-#
-# Copyright (c) 2022-2023 SMALLPROGRAM <https://github.com/smallprogram>
-# Description: Auto compile
-#
-
-name: "Auto compile with OpenWrt SDK"
 permissions:
-  contents: read
+  contents: write
+name: Build Argon Package
+
 on:
-  repository_dispatch:
-  workflow_dispatch:
-    inputs:
-      ssh:
-        description: "SSH connection to Actions"
-        required: false
-        default: "false"
   push:
     branches:
-      - "master"
+      - main
     paths:
-      - "Makefile"
-env:
-  TZ: Asia/Shanghai
-  RELEASE: 24.10.4
-  TARGET: x86
-  SUBTARGET: 64
-  PKG_DIR_NAME: luci-theme-argon
+      - 'Makefile'
+      - '!**/.github/**'
+  workflow_dispatch:
 
 jobs:
-  job_check:
-    if: github.repository == ${{ github.repository }}
-    name: Check Version
+  build:
+    name: Build for ${{ matrix.version }} / ${{ matrix.target }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      argon_version: ${{ steps.check_version.outputs.latest_version }}
-      has_update: ${{ steps.check_version.outputs.has_update }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - version: openwrt-24.10
+            target: x86_64
+            suffix: all 
+            
     steps:
-      - name: Checkout
+      - name: 🧾 Checkout repo
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          ref: "master"
 
-      - name: Check version
-        id: check_version
+      - name: 📛 Set PKG_NAME (luci-theme-argon)
+        run: echo "PKG_NAME=${{ github.event.repository.name }}" >> "$GITHUB_ENV"
+
+      - name: 🧰 Set up LuCI feed structure
+        run: |
+          set -e
+          mkdir -p package
+          printf 'include $(TOPDIR)/feeds/luci/luci.mk\n' > package/luci.mk
+
+          mkdir -p feed/luci/applications/${PKG_NAME}
+          mkdir -p feed/luci
+          printf 'include $(TOPDIR)/feeds/luci/luci.mk\n' > feed/luci/luci.mk
+
+          rsync -av \
+            --exclude='.git' \
+            --exclude='feed' \
+            --exclude='.github' \
+            ./ feed/luci/applications/${PKG_NAME}/
+
+      - name: 🏷️ Get PKG Version from Makefile
+        id: get_version
+        run: |
+          set -euo pipefail
+          VER=$(grep -oP 'PKG_VERSION:=\K.*' Makefile)
+          REL=$(grep -oP 'PKG_RELEASE:=\K.*' Makefile)
+          PKG_VERSION="${VER}-${REL}"
+          echo "Found version: ${PKG_VERSION}"
+          echo "version=${PKG_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: 🧮 Compute ARCH and Target Directory
+        run: |
+          echo "ARCH=${{ matrix.target }}-${{ matrix.version }}" >> "$GITHUB_ENV"
+
+      - name: 🏗️ Build with OpenWrt SDK
+        uses: openwrt/gh-action-sdk@v9
         env:
-          url_release: https://api.github.com/repos/${{ github.repository }}/releases/latest
+          ARCH: ${{ env.ARCH }}
+          FEEDNAME: jackie264
+          PACKAGES: ${{ env.PKG_NAME }}
+          INDEX: 0
+          FEED_DIR: ${{ github.workspace }}/feed
+          NO_SHFMT_CHECK: 1
+          NO_REFRESH_CHECK: 1
+          
+      - name: 🔍 Debug build output
         run: |
-          ver=$(grep -oP 'PKG_VERSION:=\K.*' Makefile)
-          rel=$(grep -oP 'PKG_RELEASE:=\K.*' Makefile)
-          latest_version="v${ver}-${rel}"
-          latest_release=$(wget -qO- -t1 -T2 ${{env.url_release}} | awk -F '"' '/tag_name/{print $4}')
-          has_update=$([ "${latest_version}" != "${latest_release}" ] && echo true || echo false)
-          echo "latest_version=${latest_version}" >> $GITHUB_OUTPUT
-          echo "has_update=${has_update}" >> $GITHUB_OUTPUT
-          echo "latest_version: ${latest_version}"
-          echo "latest_release: ${latest_release}"
-          echo "has_update: ${has_update}"
-
-      - name: Generate new tag & release
-        if: steps.check_version.outputs.has_update == 'true'
-        uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{steps.check_version.outputs.latest_version}}
-          name: Build-${{ steps.check_version.outputs.latest_version }}
-
-  job_build_argon:
-    name: Build Argon (master)
-    needs: job_check
-    if: needs.job_check.outputs.has_update == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Install packages
-        run: |
-          echo "Install packages"
-          sudo -E apt-get -qq update
-          sudo -E apt-get -qq install zstd build-essential clang flex bison g++ gawk gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev python3-venv rsync unzip zlib1g-dev file wget
-          sudo -E apt-get -qq autoremove --purge
-          sudo -E apt-get -qq clean
-
-      - name: Cache SDK tarball
-        uses: actions/cache@v4
-        with:
-          path: _sdk/sdk.tar.zst
-          key: sdk-${{ env.RELEASE }}-${{ env.TARGET }}-${{ env.SUBTARGET }}
-
-      - name: Download and extract SDK
-        run: |
-          set -eux
-          BASE="https://downloads.openwrt.org/releases/${RELEASE}/targets/${TARGET}/${SUBTARGET}/"
-          if [ ! -f _sdk/sdk.tar.zst ]; then
-            SDK_TARBALL=$(curl -fsSL "$BASE" | grep -o 'openwrt-sdk-[^"]*\.tar\.zst' | head -n1)
-            mkdir -p _sdk
-            wget -q "${BASE}${SDK_TARBALL}" -O _sdk/sdk.tar.zst
+          echo "=== Build directory structure ==="
+          find . -name "*.ipk" -type f 2>/dev/null || echo "No .ipk files found"
+          echo "=== bin directory structure ==="
+          ls -la bin/ 2>/dev/null || echo "No bin directory found"
+          if [ -d "bin/packages" ]; then
+            echo "=== packages directory structure ==="
+            find bin/packages/ -type f -name "*.ipk" 2>/dev/null || echo "No .ipk files in packages directory"
+            echo "=== Full packages directory tree ==="
+            ls -laR bin/packages/ 2>/dev/null || echo "No packages directory"
           fi
-          tar --zstd -xf _sdk/sdk.tar.zst -C _sdk
-          SDK_DIR="$(find "$PWD/_sdk" -maxdepth 1 -type d -name 'openwrt-sdk-*' -print -quit)"
-          echo "SDK_DIR=${SDK_DIR}" >> "$GITHUB_ENV"
 
-      - name: Copy package into SDK
-        run: |
-          set -eux
-          cd "$SDK_DIR"
-          mkdir -p package/${PKG_DIR_NAME}
-          rsync -a --delete "$GITHUB_WORKSPACE/" "package/${PKG_DIR_NAME}/" \
-            --exclude '.git' --exclude '.github' --exclude '_sdk' --exclude 'out'
+      - name: 📦 Upload artifact for ${{ matrix.target }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ env.PKG_NAME }}-${{ matrix.target }}-${{ matrix.version }}
+          path: |
+            bin/packages/*/jackie264/${{ env.PKG_NAME }}*.ipk
+          if-no-files-found: ignore
 
-      - name: Update luci feed and install luci-base
-        run: |
-          cd "$SDK_DIR"
-          ./scripts/feeds update luci
-          ./scripts/feeds install luci-base
 
-      - name: Generate default config
-        run: |
-          cd "$SDK_DIR"
-          make defconfig
+  release:
+    name: Release ${{ github.repository }}
+    needs: build
+    runs-on: ubuntu-latest
 
-      - name: Compile Argon (master)
-        id: compile
-        run: |
-          set -eux
-          cd "$SDK_DIR"
-          echo "make package/luci-theme-argon/{clean,compile} -j$(nproc)"
-          make package/${{ env.PKG_DIR_NAME }}/{clean,compile} -j$(nproc)
-          mv bin/packages/${{ env.TARGET }}/${{ env.SUBTARGET }}/base/ ../
-          rm .config .config.old
-          cd ..
-          echo "status=success" >> $GITHUB_OUTPUT
-          echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+    steps:
+      - name: 🧾 Checkout repo
+        uses: actions/checkout@v6
 
-      - name: Collect build artifacts
-        run: |
-          mkdir -p "$GITHUB_WORKSPACE/out"
-          find base -type f -name "luci-theme*.ipk" -print -exec cp -f {} "$GITHUB_WORKSPACE/out/" \;
-          cd "$GITHUB_WORKSPACE/out" && sha256sum *.ipk > SHA256SUMS.txt || true && ls -l
+      - name: ⬇️ Download all build artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: ./release-assets
 
-      - name: Upload Argon (master) ipks to release
+      - name: 🗃️ Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: steps.compile.outputs.status == 'success'
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
+          name: Build-v${{ needs.build.outputs.version }}
+          files: |
+            ./release-assets/**/*.ipk
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ needs.job_check.outputs.argon_version }}
-          files: ${{ env.FIRMWARE }}/base/luci-theme*.*
 
       - name: Checkout custom-packages repo
         uses: actions/checkout@v6
@@ -161,18 +131,19 @@ jobs:
         run: |
           mkdir -p custom-packages/luci
           
-          find ./out -type f -name "*.ipk" | while read -r f; do
+          find ./release-assets -type f -name "*.ipk" | while read -r f; do
             base=$(basename "$f")
             pkgname=$(echo "$base" | sed -E 's/^([^_]+)_.*$/\1/')
             echo "Cleaning old versions of $pkgname"
             rm -f custom-packages/luci/${pkgname}_*.ipk
             cp "$f" custom-packages/luci/
           done
+          
           ls -la custom-packages/luci/
           echo "PKG_NAME=${{ github.event.repository.name }}" >> "$GITHUB_ENV"
           cd custom-packages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add luci/
-          git commit -m "Update to - ${{ needs.job_check.outputs.argon_version }}" || echo "No changes"
+          git commit -m "Update to - v${{ needs.build.outputs.version }}" || echo "No changes"
           git push
