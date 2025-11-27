@@ -1,4 +1,4 @@
-name: Apply Theme Modifications
+name: Auto Modify Theme
 
 on:
   workflow_dispatch:
