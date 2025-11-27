@@ -103,12 +103,12 @@ jobs:
           SDK_DIR="$(find "$PWD/_sdk" -maxdepth 1 -type d -name 'openwrt-sdk-*' -print -quit)"
           echo "SDK_DIR=${SDK_DIR}" >> "$GITHUB_ENV"
 
-      - name: Copy package into SDK
-        run: |
-          cd "$SDK_DIR"
-          mkdir -p package/${PKG_DIR_NAME}
-          rsync -a --delete "$GITHUB_WORKSPACE/" "package/${PKG_DIR_NAME}/" \
-            --exclude '.git' --exclude '.github' --exclude '_sdk' --exclude 'out'
+#      - name: Copy package into SDK
+#        run: |
+#          cd "$SDK_DIR"
+#          mkdir -p package/${PKG_DIR_NAME}
+#          rsync -a --delete "$GITHUB_WORKSPACE/" "package/${PKG_DIR_NAME}/" \
+#            --exclude '.git' --exclude '.github' --exclude '_sdk' --exclude 'out'
 
       - name: Initialize and update feeds
         run: |
@@ -120,11 +120,11 @@ jobs:
           echo "src-git-full luci https://github.com/openwrt/luci.git;master" >> feeds.conf
           echo "src-git-full routing https://git.openwrt.org/feed/routing.git;master" >> feeds.conf
 
+          git clone -b master https://github.com/${{ github.repository }}.git package/downloads/luci-theme-argon
           ./scripts/feeds update -a
           echo "CONFIG_PACKAGE_${{ env.PKG_DIR_NAME }}=m" >> .config
           # ./scripts/feeds install luci-base
           ./scripts/feeds install -d n ${{ env.PKG_DIR_NAME }}
-          
           make download -j$(nproc)
 
       - name: Configure Argon (master)
