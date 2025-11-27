@@ -22,8 +22,11 @@ jobs:
         include:
           - version: openwrt-24.10
             target: x86_64
-            suffix: all 
-            
+            suffix: all
+
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+
     steps:
       - name: 🧾 Checkout repo
         uses: actions/checkout@v6
