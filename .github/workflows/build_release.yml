@@ -111,34 +111,15 @@ jobs:
           rsync -a --delete "$GITHUB_WORKSPACE/" "package/${PKG_DIR_NAME}/" \
             --exclude '.git' --exclude '.github' --exclude '_sdk' --exclude 'out'
 
-      - name: Initialize and update feeds
+      - name: Update luci feed and install luci-base
         run: |
-          set -eux
           cd "$SDK_DIR"
-          
-          echo "src-git base https://github.com/openwrt/openwrt.git;main" > feeds.conf
-          echo "src-git-full packages https://github.com/openwrt/packages.git;master" >> feeds.conf
-          echo "src-git-full luci https://github.com/openwrt/luci.git;master" >> feeds.conf
-          echo "src-git-full routing https://git.openwrt.org/feed/routing.git;master" >> feeds.conf
-
-          # git clone -b master https://github.com/${{ github.repository }}.git package/downloads/luci-theme-argon
-          ./scripts/feeds update -a
-          # echo "CONFIG_PACKAGE_${{ env.PKG_DIR_NAME }}=m" >> .config
+          ./scripts/feeds update luci
           ./scripts/feeds install luci-base
-          # ./scripts/feeds install -d n ${{ env.PKG_DIR_NAME }}
-          make download -j$(nproc)
 
-      - name: Configure Argon (master)
+      - name: Generate default config
         run: |
-          set -eux
           cd "$SDK_DIR"
-          # ./scripts/feeds install ${{ env.PKG_DIR_NAME }}
-          #echo "CONFIG_ALL_NONSHARED=n" > .config
-          #echo "CONFIG_ALL_KMODS=n" >> .config
-          #echo "CONFIG_ALL=n" >> .config
-          #echo "CONFIG_AUTOREMOVE=n" >> .config
-          #echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
-          #echo "CONFIG_PACKAGE_${{ env.PKG_DIR_NAME }}=m" >> .config
           make defconfig
 
       - name: Compile Argon (master)
