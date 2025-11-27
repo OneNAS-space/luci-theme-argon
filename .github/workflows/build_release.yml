@@ -80,12 +80,12 @@ jobs:
           sudo -E apt-get -qq autoremove --purge
           sudo -E apt-get -qq clean
 
-      - name: Cache openwrt SDK
-        id: cache-sdk
-        uses: actions/cache@v4
-        with:
-          path: sdk
-          key: openwrt-sdk-24.10.4-x86-64
+#      - name: Cache openwrt SDK
+#        id: cache-sdk
+#        uses: actions/cache@v4
+#        with:
+#          path: sdk
+#          key: openwrt-sdk-24.10.4-x86-64
 
       - name: Initialization environment
         if: steps.cache-sdk.outputs.cache-hit != 'true'
