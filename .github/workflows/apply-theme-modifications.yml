@@ -6,11 +6,13 @@ on:
     paths:
       - 'ucode/template/themes/argon/footer.ut'
       - 'ucode/template/themes/argon/footer_login.ut'
+      - 'htdocs/luci-static/argon/css/cascade.css'
       - 'less/layout.less'
   pull_request:
     paths:
       - 'ucode/template/themes/argon/footer.ut'
       - 'ucode/template/themes/argon/footer_login.ut'
+      - 'htdocs/luci-static/argon/css/cascade.css'
       - 'less/layout.less'
 
 permissions:
@@ -30,33 +32,45 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Modify Brand Font Size in LESS
-        id: modify_less
+      - name: Modify Brand Font Size (LESS & CSS)
+        id: modify_font
         run: |
           set -e
+          css_file="htdocs/luci-static/argon/css/cascade.css"
           less_file="less/layout.less"
           
           if [ ! -f "$less_file" ]; then
-            echo "LESS file ($less_file) not found."
+            echo "LESS file ($less_file) not found!"
+            exit 1
+          fi
+          if [ ! -f "$css_file" ]; then
+            echo "CSS file not found!"
             exit 1
           fi
 
-          before=$(cat "$less_file" | md5sum | cut -d' ' -f1)
+          before_less=$(md5sum "$less_file" | cut -d' ' -f1)
+          before_css=$(md5sum "$css_file" | cut -d' ' -f1)
 
           perl -0777 -pi -e 's/(\.sidenav-header\s*\{.*?\.brand\s*\{.*?font-size:\s*)1\.8rem;/${1}1\.5rem;/s' "$less_file"
+          perl -0777 -pi -e 's/(font-size:)1\.8rem;/${1}1\.5rem;/s' "$css_file"
           
-          after=$(cat "$less_file" | md5sum | cut -d' ' -f1)
+          after_less=$(md5sum "$less_file" | cut -d' ' -f1)
+          after_css=$(md5sum "$css_file" | cut -d' ' -f1)
           
           echo "before=$before" >> $GITHUB_OUTPUT
           echo "after=$after" >> $GITHUB_OUTPUT
 
-          if [ "$before" = "$after" ]; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-            echo "No LESS changes were needed"
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "LESS font size changed from 1.8rem to 1.5rem in less/layout.less."
+          changed="false"
+          if [ "$before_less" != "$after_less" ]; then
+            echo "LESS file updated."
+            changed="true"
           fi
+          if [ "$before_css" != "$after_css" ]; then
+            echo "CSS file updated."
+            changed="true"
+          fi
+          
+          echo "changed=$changed" >> $GITHUB_OUTPUT
 
       - name: Remove Footer Credits
         id: modify_footer
@@ -90,18 +104,19 @@ jobs:
           fi
 
       - name: Show git diff
-        if: steps.modify_less.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true'
+        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true'
         run: git --no-pager diff --color
 
       - name: Commit and push changes
-        if: steps.modify_less.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true'
+        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true'
         run: |
+          if [ "${{ steps.modify_font.outputs.changed }}" == "true" ]; then
+            git add less/layout.less
+            git add htdocs/luci-static/argon/css/cascade.css
+          fi
           if [ "${{ steps.modify_footer.outputs.changed }}" == "true" ]; then
             git add ucode/template/themes/argon/footer.ut
             git add ucode/template/themes/argon/footer_login.ut
-          fi
-          if [ "${{ steps.modify_less.outputs.changed }}" == "true" ]; then
-            git add less/layout.less
           fi
           git commit -m "chore: Apply theme modifications" || echo "No changes to commit"
           git push origin HEAD:master
