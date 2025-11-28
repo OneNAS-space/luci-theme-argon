@@ -33,3 +33,6 @@ It also supports automatic and manual switching between light and dark modes.
 ![desktop](/Screenshots/screenshot_pc.jpg)
 ![mobile](/Screenshots/screenshot_phone.jpg)
 
+
+- 修改 Brand 字号为 `1.5rem` 否则字数多一点点就换行
+- 删除了 footer 的 `Argon` 链接
