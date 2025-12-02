@@ -65,7 +65,7 @@ jobs:
           echo "ARCH=${{ matrix.target }}-${{ matrix.version }}" >> "$GITHUB_ENV"
 
       - name: 🏗️ Build with OpenWrt SDK
-        uses: openwrt/gh-action-sdk@v9
+        uses: openwrt/gh-action-sdk@v10
         env:
           ARCH: ${{ env.ARCH }}
           FEEDNAME: jackie264
