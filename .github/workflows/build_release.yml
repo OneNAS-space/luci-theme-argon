@@ -89,7 +89,7 @@ jobs:
           fi
 
       - name: 📦 Upload artifact for ${{ matrix.target }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PKG_NAME }}-${{ matrix.target }}-${{ matrix.version }}
           path: |
