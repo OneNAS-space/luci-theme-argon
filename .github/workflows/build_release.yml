@@ -12,8 +12,53 @@ on:
   workflow_dispatch:
 
 jobs:
+  check:
+    name: 1. Check if build is required
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check_release.outputs.should_build }}
+      tag_name: ${{ steps.version.outputs.tag_name }}
+      main_version: ${{ steps.version.outputs.main_version }}
+      main_full_version: ${{ steps.version.outputs.main_full_version }}
+
+    steps:
+      - name: 🧾 Checkout repo
+        uses: actions/checkout@v6
+
+      - name: 🏷️ Extract version info from Makefile
+        id: version
+        run: |
+          PKG_VERSION=$(grep -E '^PKG_VERSION *:?=' Makefile | head -n1 | cut -d= -f2 | tr -d '[:space:]')
+          PKG_RELEASE=$(grep -E '^PKG_RELEASE *:?=' Makefile | head -n1 | cut -d= -f2 | tr -d '[:space:]')
+          COMBINED_VERSION="${PKG_VERSION}-r${PKG_RELEASE}"
+          
+          echo "tag_name=v${COMBINED_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "main_version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
+          echo "main_full_version=$COMBINED_VERSION" >> "$GITHUB_OUTPUT"
+                    
+      - name: 🧐 Check if release exists
+        id: check_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag_name }}
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual run detected. Forcing build."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists. Skipping build."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release $TAG does not exist. Proceeding with build."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
-    name: Build for ${{ matrix.version }} / ${{ matrix.target }}
+    name: 2. Build for ${{ matrix.version }} / ${{ matrix.target }}
+    needs: check
+    if: needs.check.outputs.should_build == 'true'
     runs-on: ubuntu-latest
 
     strategy:
@@ -23,9 +68,12 @@ jobs:
           - version: openwrt-24.10
             target: x86_64
             suffix: all
+          - version: openwrt-25.12
+            target: x86_64
+            suffix: noarch
 
-    outputs:
-      version: ${{ steps.get_version.outputs.version }}
+#    outputs:
+#      version: ${{ steps.get_version.outputs.version }}
 
     steps:
       - name: 🧾 Checkout repo
@@ -50,15 +98,15 @@ jobs:
             --exclude='.github' \
             ./ feed/luci/applications/${PKG_NAME}/
 
-      - name: 🏷️ Get PKG Version from Makefile
-        id: get_version
-        run: |
-          set -euo pipefail
-          VER=$(grep -oP 'PKG_VERSION:=\K.*' Makefile)
-          REL=$(grep -oP 'PKG_RELEASE:=\K.*' Makefile)
-          PKG_VERSION="${VER}-${REL}"
-          echo "Found version: ${PKG_VERSION}"
-          echo "version=${PKG_VERSION}" >> $GITHUB_OUTPUT
+#      - name: 🏷️ Get PKG Version from Makefile
+#        id: get_version
+#        run: |
+#          set -euo pipefail
+#          VER=$(grep -oP 'PKG_VERSION:=\K.*' Makefile)
+#          REL=$(grep -oP 'PKG_RELEASE:=\K.*' Makefile)
+#          PKG_VERSION="${VER}-${REL}"
+#          echo "Found version: ${PKG_VERSION}"
+#          echo "version=${PKG_VERSION}" >> $GITHUB_OUTPUT
 
       - name: 🧮 Compute ARCH and Target Directory
         run: |
@@ -94,12 +142,14 @@ jobs:
           name: ${{ env.PKG_NAME }}-${{ matrix.target }}-${{ matrix.version }}
           path: |
             bin/packages/*/jackie264/${{ env.PKG_NAME }}*.ipk
+            bin/packages/*/jackie264/${{ env.PKG_NAME }}*.apk
           if-no-files-found: ignore
 
 
   release:
     name: Release ${{ github.repository }}
-    needs: build
+    needs: [check, build]
+    if: needs.check.outputs.should_build == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -114,10 +164,11 @@ jobs:
       - name: 🗃️ Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.build.outputs.version }}
-          name: Build-v${{ needs.build.outputs.version }}
+          tag_name: ${{ needs.check.outputs.tag_name }}
+          name: Build-v${{ needs.check.outputs.main_full_version }}
           files: |
             ./release-assets/**/*.ipk
+            ./release-assets/**/*.apk
           draft: false
           prerelease: false
         env:
@@ -132,21 +183,31 @@ jobs:
 
       - name: Update luci artifacts
         run: |
-          mkdir -p custom-packages/luci
-          
-          find ./release-assets -type f -name "*.ipk" | while read -r f; do
+          set -e
+          CURRENT_PKG="${{ github.event.repository.name }}"
+          mkdir -p custom-packages/24.10/luci
+          mkdir -p custom-packages/25.12/luci
+          echo "Cleaning all old versions for $CURRENT_PKG before updating..."
+          rm -f custom-packages/24.10/luci/${CURRENT_PKG}_*.ipk
+          rm -f custom-packages/25.12/luci/${CURRENT_PKG}-*.apk
+          find ./release-assets -type f \( -name "*.ipk" -o -name "*.apk" \) | while read -r f; do
             base=$(basename "$f")
-            pkgname=$(echo "$base" | sed -E 's/^([^_]+)_.*$/\1/')
-            echo "Cleaning old versions of $pkgname"
-            rm -f custom-packages/luci/${pkgname}_*.ipk
-            cp "$f" custom-packages/luci/
+            if [[ "$base" == *.ipk ]]; then
+              echo "Deploying $base to 24.10/luci/"
+              cp "$f" custom-packages/24.10/luci/
+            elif [[ "$base" == *.apk ]]; then
+              echo "Deploying $base to 25.12/luci/"
+              cp "$f" custom-packages/25.12/luci/
+            fi
           done
-          
-          ls -la custom-packages/luci/
-          echo "PKG_NAME=${{ github.event.repository.name }}" >> "$GITHUB_ENV"
+          echo "=== 24.10 Content ==="
+          ls -la custom-packages/24.10/luci/${CURRENT_PKG}* || echo "No IPKs found"
+          echo "=== 25.12 Content ==="
+          ls -la custom-packages/25.12/luci/${CURRENT_PKG}* || echo "No APKs found"
+
           cd custom-packages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add luci/
-          git commit -m "Update to - v${{ needs.build.outputs.version }}" || echo "No changes"
+          git add 24.10/luci/ 25.12/luci
+          git commit -m "Update $CURRENT_PKG to v${{ needs.check.outputs.main_full_version }}" || echo "No changes"
           git push
