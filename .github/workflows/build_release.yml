@@ -72,8 +72,6 @@ jobs:
             target: x86_64
             suffix: noarch
 
-#    outputs:
-#      version: ${{ steps.get_version.outputs.version }}
 
     steps:
       - name: 🧾 Checkout repo
@@ -97,16 +95,6 @@ jobs:
             --exclude='feed' \
             --exclude='.github' \
             ./ feed/luci/applications/${PKG_NAME}/
-
-#      - name: 🏷️ Get PKG Version from Makefile
-#        id: get_version
-#        run: |
-#          set -euo pipefail
-#          VER=$(grep -oP 'PKG_VERSION:=\K.*' Makefile)
-#          REL=$(grep -oP 'PKG_RELEASE:=\K.*' Makefile)
-#          PKG_VERSION="${VER}-${REL}"
-#          echo "Found version: ${PKG_VERSION}"
-#          echo "version=${PKG_VERSION}" >> $GITHUB_OUTPUT
 
       - name: 🧮 Compute ARCH and Target Directory
         run: |
@@ -208,6 +196,11 @@ jobs:
           cd custom-packages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add 24.10/luci/ 25.12/luci
-          git commit -m "Update $CURRENT_PKG to v${{ needs.check.outputs.main_full_version }}" || echo "No changes"
-          git push
+          git add 24.10/luci/ 25.12/luci 2>/dev/null || true
+          git commit -m "Update $CURRENT_PKG to v${{ needs.check.outputs.main_full_version }}"  || exit 0
+          
+          for i in {1..5}; do
+            git pull --rebase origin main && \
+            git push origin main && break || \
+            (echo "Conflict detected, retrying in 5s..." && sleep 5)
+          done
