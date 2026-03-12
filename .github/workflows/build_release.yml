@@ -173,30 +173,30 @@ jobs:
         run: |
           set -e
           CURRENT_PKG="${{ github.event.repository.name }}"
-          mkdir -p custom-packages/24.10/luci
-          mkdir -p custom-packages/25.12/luci
+          mkdir -p custom-packages/releases/packages-24.10/luci
+          mkdir -p custom-packages/releases/packages-25.12/luci
           echo "Cleaning all old versions for $CURRENT_PKG before updating..."
-          rm -f custom-packages/24.10/luci/${CURRENT_PKG}_*.ipk
-          rm -f custom-packages/25.12/luci/${CURRENT_PKG}-*.apk
+          rm -f custom-packages/releases/packages-24.10/luci/${CURRENT_PKG}_*.ipk
+          rm -f custom-packages/releases/packages-25.12/luci/${CURRENT_PKG}-*.apk
           find ./release-assets -type f \( -name "*.ipk" -o -name "*.apk" \) | while read -r f; do
             base=$(basename "$f")
             if [[ "$base" == *.ipk ]]; then
-              echo "Deploying $base to 24.10/luci/"
-              cp "$f" custom-packages/24.10/luci/
+              echo "Deploying $base to releases/packages-24.10/luci/"
+              cp "$f" custom-packages/releases/packages-24.10/luci/
             elif [[ "$base" == *.apk ]]; then
-              echo "Deploying $base to 25.12/luci/"
-              cp "$f" custom-packages/25.12/luci/
+              echo "Deploying $base to releases/packages-25.12/luci/"
+              cp "$f" custom-packages/releases/packages-25.12/luci/
             fi
           done
           echo "=== 24.10 Content ==="
-          ls -la custom-packages/24.10/luci/${CURRENT_PKG}* || echo "No IPKs found"
+          ls -la custom-packages/releases/packages-24.10/luci/${CURRENT_PKG}* || echo "No IPKs found"
           echo "=== 25.12 Content ==="
-          ls -la custom-packages/25.12/luci/${CURRENT_PKG}* || echo "No APKs found"
+          ls -la custom-packages/releases/packages-25.12/luci/${CURRENT_PKG}* || echo "No APKs found"
 
           cd custom-packages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add 24.10/luci/ 25.12/luci 2>/dev/null || true
+          git add 24.10/luci/ releases/packages-25.12/luci/ 2>/dev/null || true
           git commit -m "Update $CURRENT_PKG to ${{ needs.check.outputs.main_full_version }}"  || exit 0
           
           for i in {1..5}; do
