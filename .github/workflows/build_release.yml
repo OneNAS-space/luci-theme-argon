@@ -30,9 +30,9 @@ jobs:
         run: |
           PKG_VERSION=$(grep -E '^PKG_VERSION *:?=' Makefile | head -n1 | cut -d= -f2 | tr -d '[:space:]')
           PKG_RELEASE=$(grep -E '^PKG_RELEASE *:?=' Makefile | head -n1 | cut -d= -f2 | tr -d '[:space:]')
-          COMBINED_VERSION="${PKG_VERSION}-r${PKG_RELEASE}"
+          COMBINED_VERSION="v${PKG_VERSION}-r${PKG_RELEASE}"
           
-          echo "tag_name=v${COMBINED_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag_name=${COMBINED_VERSION}" >> "$GITHUB_OUTPUT"
           echo "main_version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
           echo "main_full_version=$COMBINED_VERSION" >> "$GITHUB_OUTPUT"
                     
@@ -152,8 +152,8 @@ jobs:
       - name: 🗃️ Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.check.outputs.tag_name }}
-          name: Build-v${{ needs.check.outputs.main_full_version }}
+          tag_name: ${{ needs.check.outputs.main_full_version }}
+          name: Build-${{ needs.check.outputs.main_full_version }}
           files: |
             ./release-assets/**/*.ipk
             ./release-assets/**/*.apk
@@ -197,7 +197,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add 24.10/luci/ 25.12/luci 2>/dev/null || true
-          git commit -m "Update $CURRENT_PKG to v${{ needs.check.outputs.main_full_version }}"  || exit 0
+          git commit -m "Update $CURRENT_PKG to ${{ needs.check.outputs.main_full_version }}"  || exit 0
           
           for i in {1..5}; do
             git pull --rebase origin main && \
