@@ -8,12 +8,14 @@ on:
       - 'ucode/template/themes/argon/footer_login.ut'
       - 'htdocs/luci-static/argon/css/cascade.css'
       - 'less/layout.less'
+      - 'Makefile'
   pull_request:
     paths:
       - 'ucode/template/themes/argon/footer.ut'
       - 'ucode/template/themes/argon/footer_login.ut'
       - 'htdocs/luci-static/argon/css/cascade.css'
       - 'less/layout.less'
+      - 'Makefile'
 
 permissions:
   contents: write
@@ -103,12 +105,36 @@ jobs:
             echo "Changes applied."
           fi
 
+      - name: Modify Makefile Dependencies
+        id: modify_makefile
+        run: |
+          set -e
+          makefile="Makefile"
+          if [ ! -f "$makefile" ]; then
+            echo "Makefile not found!"
+            exit 1
+          fi
+
+          before_hash=$(md5sum "$makefile" | cut -d' ' -f1)
+          
+          sed -i 's/LUCI_DEPENDS:=+wget +jsonfilter/LUCI_DEPENDS:=+wget-ssl +jsonfilter/g' "$makefile"
+          
+          after_hash=$(md5sum "$makefile" | cut -d' ' -f1)
+          
+          if [ "$before_hash" != "$after_hash" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Makefile updated."
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes needed for Makefile."
+          fi
+
       - name: Show git diff
-        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true'
+        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true' || steps.modify_makefile.outputs.changed == 'true'
         run: git --no-pager diff --color
 
       - name: Commit and push changes
-        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true'
+        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true' || steps.modify_makefile.outputs.changed == 'true'
         run: |
           if [ "${{ steps.modify_font.outputs.changed }}" == "true" ]; then
             git add less/layout.less
@@ -118,5 +144,8 @@ jobs:
             git add ucode/template/themes/argon/footer.ut
             git add ucode/template/themes/argon/footer_login.ut
           fi
-          git commit -m "chore: Apply theme modifications" || echo "No changes to commit"
+          if [ "${{ steps.modify_makefile.outputs.changed }}" == "true" ]; then
+            git add Makefile
+          fi
+          git commit -m "chore: Apply theme and dependency modifications" || echo "No changes to commit"
           git push origin HEAD:master
