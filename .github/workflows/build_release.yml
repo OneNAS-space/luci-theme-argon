@@ -72,7 +72,6 @@ jobs:
             target: x86_64
             suffix: noarch
 
-
     steps:
       - name: 🧾 Checkout repo
         uses: actions/checkout@v6
@@ -132,7 +131,6 @@ jobs:
             bin/packages/*/jackie264/${{ env.PKG_NAME }}*.ipk
             bin/packages/*/jackie264/${{ env.PKG_NAME }}*.apk
           if-no-files-found: ignore
-
 
   release:
     name: Release ${{ github.repository }}
@@ -196,8 +194,12 @@ jobs:
           cd custom-packages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add 24.10/luci/ releases/packages-25.12/luci/ 2>/dev/null || true
-          git commit -m "Update $CURRENT_PKG to ${{ needs.check.outputs.main_full_version }}"  || exit 0
+          git add releases/packages-24.10/luci/ releases/packages-25.12/luci/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Update $CURRENT_PKG to ${{ needs.check.outputs.main_full_version }}"
           
           for i in {1..5}; do
             git pull --rebase origin main && \
