@@ -116,14 +116,19 @@ jobs:
           fi
 
           before_hash=$(md5sum "$makefile" | cut -d' ' -f1)
-          
+
           sed -i 's/LUCI_DEPENDS:=+wget +jsonfilter/LUCI_DEPENDS:=+wget-ssl +jsonfilter/g' "$makefile"
-          
+
+          if ! grep -q 'ucode-mod-math' "$makefile"; then
+            sed -i '/^LUCI_DEPENDS:=/ s/$/ +ucode-mod-math/' "$makefile"
+          fi
+
           after_hash=$(md5sum "$makefile" | cut -d' ' -f1)
-          
+
           if [ "$before_hash" != "$after_hash" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "Makefile updated."
+            grep '^LUCI_DEPENDS' "$makefile"
           else
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "No changes needed for Makefile."
