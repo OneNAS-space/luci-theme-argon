@@ -23,6 +23,10 @@
 
 				<span class="footer-separator">|</span>
 
+				<a href="https://github.com/jerrykuku/luci-theme-argon" target="_blank">ArgonTheme {# vPKG_VERSION #}</a>
+
+				<span class="footer-separator">|</span>
+
 				<a class="luci-link" href="{{ version.disturl }}" target="_blank">{{ version.distname }} {{ version.distversion }}-{{ version.distrevision }}</a>
 
 				<ul class="breadcrumb pull-right" id="modemenu" style="display:none"></ul>
@@ -30,10 +34,6 @@
 		</footer>
 	</div>
 </div>
-	<script>
-		// thanks for Jo-Philipp Wich <jow@openwrt.org>
-		var luciLocation = {{ ctx.path }};
-	</script>
-<script type="text/javascript">L.require('menu-argon')</script>
+{% include('themes/' + theme + '/page_scripts', { is_login: false }) %}
 </body>
 </html>
