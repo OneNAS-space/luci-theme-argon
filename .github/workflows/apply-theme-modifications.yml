@@ -59,8 +59,6 @@ jobs:
           after_less=$(md5sum "$less_file" | cut -d' ' -f1)
           after_css=$(md5sum "$css_file" | cut -d' ' -f1)
           
-          echo "before=$before" >> $GITHUB_OUTPUT
-          echo "after=$after" >> $GITHUB_OUTPUT
 
           changed="false"
           if [ "$before_less" != "$after_less" ]; then
@@ -90,7 +88,7 @@ jobs:
 
           perl -0777 -pi -e 's/\s*<span class="footer-separator">\|<\/span>\s*<a href="https:\/\/github\.com\/jerrykuku\/luci-theme-argon"[^>]*>.*?<\/a>//s' "$f1"
 
-          perl -ni -e 'print unless /ArgonTheme/' "$f2"
+          perl -ni -e 'print unless /<a\s[^>]*luci-theme-argon[^>]*>\s*ArgonTheme/' "$f2"
           
           after=$(cat "$f1" "$f2" | md5sum | cut -d' ' -f1)
           
