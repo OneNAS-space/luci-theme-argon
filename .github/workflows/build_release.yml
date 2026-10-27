@@ -105,7 +105,6 @@ jobs:
           FEED_DIR: ${{ github.workspace }}/feed
           NO_SHFMT_CHECK: 1
           NO_REFRESH_CHECK: 1
-          V: s
 
       - name: 📜 Upload build logs
         if: always()
