@@ -1413,7 +1413,7 @@ select[multiple] {
 .main-left .sidenav-header .brand {
   display: block;
   margin: 0 2rem;
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   font-family: "TypoGraphica";
   color: var(--sidebar-brand-color);
   text-decoration: none;
