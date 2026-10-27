@@ -8,6 +8,7 @@ on:
       - master
     paths:
       - 'Makefile'
+      - 'patches/**'
       - '!**/.github/**'
   workflow_dispatch:
 
@@ -31,11 +32,11 @@ jobs:
           PKG_VERSION=$(grep -E '^PKG_VERSION *:?=' Makefile | head -n1 | cut -d= -f2 | tr -d '[:space:]')
           PKG_RELEASE=$(grep -E '^PKG_RELEASE *:?=' Makefile | head -n1 | cut -d= -f2 | tr -d '[:space:]')
           COMBINED_VERSION="v${PKG_VERSION}-r${PKG_RELEASE}"
-          
+
           echo "tag_name=${COMBINED_VERSION}" >> "$GITHUB_OUTPUT"
           echo "main_version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
           echo "main_full_version=$COMBINED_VERSION" >> "$GITHUB_OUTPUT"
-                  
+
       - name: 🧐 Check if release exists
         id: check_release
         env:
@@ -73,9 +74,36 @@ jobs:
       - name: 🧾 Checkout repo
         uses: actions/checkout@v7
 
+      # Local modifications live in patches/ (git-style, applied in order) so the
+      # repository itself can stay identical to upstream. A patch that no longer
+      # applies fails the build instead of being silently skipped.
+      - name: 🩹 Apply theme patches
+        run: |
+          set -e
+          shopt -s nullglob
+          for p in patches/*.patch; do
+            echo "Applying $p"
+            if ! git apply --check "$p"; then
+              echo "::error file=$p::Patch no longer applies to this upstream version. Regenerate it."
+              exit 1
+            fi
+            git apply "$p"
+          done
+          git --no-pager diff --stat
+
+      # cascade.css is compiled from less/ (upstream CI compares them byte for
+      # byte), so rebuild it after patching the LESS sources.
+      - name: 🎨 Rebuild cascade.css from LESS
+        run: |
+          set -e
+          npm install --global less@4.1.3
+          lessc less/cascade.less htdocs/luci-static/argon/css/cascade.css
+
       - name: 📛 Set PKG_NAME
         run: echo "PKG_NAME=${{ github.event.repository.name }}" >> "$GITHUB_ENV"
 
+      # patches/ must not be copied into the package directory: OpenWrt applies a
+      # package's own patches/ to its build dir automatically.
       - name: 🧰 Set up LuCI feed structure
         run: |
           set -e
@@ -90,6 +118,7 @@ jobs:
             --exclude='.git' \
             --exclude='feed' \
             --exclude='.github' \
+            --exclude='patches' \
             ./ feed/luci/applications/${PKG_NAME}/
 
       - name: 🧮 Compute ARCH
@@ -105,14 +134,6 @@ jobs:
           FEED_DIR: ${{ github.workspace }}/feed
           NO_SHFMT_CHECK: 1
           NO_REFRESH_CHECK: 1
-
-      - name: 📜 Upload build logs
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: logs-${{ matrix.target }}-${{ matrix.version }}
-          path: logs/
-          if-no-files-found: ignore
 
       - name: 🔍 Debug build output
         run: |
@@ -171,15 +192,15 @@ jobs:
           CURRENT_PKG="${{ github.event.repository.name }}"
           TARGET_DIR="custom-packages/releases/packages-25.12/luci"
           mkdir -p "$TARGET_DIR"
-          
+
           echo "Cleaning all old versions for $CURRENT_PKG in $TARGET_DIR..."
           rm -f "$TARGET_DIR/${CURRENT_PKG}"-*.apk
-          
+
           find ./release-assets -type f -name "*.apk" | while read -r f; do
             echo "Deploying $(basename "$f") to $TARGET_DIR/"
             cp "$f" "$TARGET_DIR/"
           done
-          
+
           echo "=== 25.12 Content ==="
           ls -la "$TARGET_DIR/${CURRENT_PKG}"* || echo "No APKs found"
 
@@ -187,12 +208,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "releases/packages-25.12/luci/"
-          
+
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0
           fi
-          
+
           git commit -m "Update $CURRENT_PKG to ${{ needs.check.outputs.main_full_version }}"
           for i in {1..5}; do
             git pull --rebase origin main && \
