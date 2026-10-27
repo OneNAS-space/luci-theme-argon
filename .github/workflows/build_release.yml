@@ -96,7 +96,7 @@ jobs:
       - name: 🎨 Rebuild cascade.css from LESS
         run: |
           set -e
-          npm install --global less@4.1.3
+          npm install --global less@4.9.1
           lessc less/cascade.less htdocs/luci-static/argon/css/cascade.css
 
       - name: 📛 Set PKG_NAME
