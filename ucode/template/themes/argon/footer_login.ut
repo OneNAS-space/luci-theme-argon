@@ -24,6 +24,7 @@
 <footer>
 	<div class="login-footer-links">
 		<a href="https://github.com/openwrt/luci" target="_blank" title="{{ entityencode(luci_info, true) }}">{{ split(version.luciname, ' (')[0] }}</a>
+		<a href="https://github.com/jerrykuku/luci-theme-argon" target="_blank">ArgonTheme {# vPKG_VERSION #}</a>
 	</div>
 	<a href="{{ version.disturl }}" target="_blank" title="{{ entityencode(firmware_info, true) }}">{{ firmware_info }}</a>
 </footer>
