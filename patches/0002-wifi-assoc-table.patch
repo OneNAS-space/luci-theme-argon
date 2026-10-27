@@ -1,0 +1,52 @@
+diff --git a/less/pages/wireless.less b/less/pages/wireless.less
+index feac02b..5a69358 100644
+--- a/less/pages/wireless.less
++++ b/less/pages/wireless.less
+@@ -55,13 +55,47 @@
+         }
+     }
+ 
++    // The action column is sized to 1% (see forms.less) so the button defines
++    // its minimum width. A ComboButton label that may break anywhere would
++    // shrink that minimum to one character, so keep "Disconnect" on one line.
++    .td > .cbi-dropdown:is(.btn, .cbi-button):not([multiple]) {
++        min-width: max-content;
++
++        > ul:not(.dropdown) > li {
++            white-space: nowrap;
++            overflow-wrap: normal;
++        }
++    }
++
++    // In the table layout, cells inherit overflow-wrap: anywhere, which lets the
++    // table shrink columns until a MAC address breaks mid-address. break-word
++    // keeps each cell's longest token intact, and slimmer cell padding plus a
++    // smaller first column leave room for it between 1153px and 1400px.
+     @media screen and (min-width: 1153px) {
++        > .tr > :is(.th, .td) {
++            padding-inline: .75rem;
++            overflow-wrap: break-word;
++        }
++
+         > .tr > :is(.th, .td):first-child {
+             width: 22%;
++            min-width: 10rem;
++        }
++    }
++
++    @media screen and (min-width: 1400px) {
++        > .tr > :is(.th, .td):first-child {
+             min-width: 14rem;
+         }
+     }
+ 
++    // LuCI renders the host cell as `name <span class="hide-xs">(ipv4, ipv6)</span>`.
++    // Put the addresses on their own line instead of letting the whole string
++    // fold wherever the column happens to end.
++    > .tr > .td > span.hide-xs {
++        display: block;
++    }
++
+     @media screen and (max-width: 600px) {
+         .td:has(> .ifacebadge[data-ssid]) {
+             flex-basis: 100%;
