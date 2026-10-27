@@ -1,0 +1,13 @@
+diff --git a/less/layout.less b/less/layout.less
+index b5ba9a2..d7817f7 100644
+--- a/less/layout.less
++++ b/less/layout.less
+@@ -43,7 +43,7 @@
+         .brand {
+             display: block;
+             margin: 0 2rem;
+-            font-size: 1.8rem;
++            font-size: 1.5rem;
+             font-family: "TypoGraphica";
+             color: var(--sidebar-brand-color);
+             text-decoration: none;
