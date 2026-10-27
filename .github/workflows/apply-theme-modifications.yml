@@ -57,6 +57,71 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
+      # Local fixes for the Wi-Fi "Associated Stations" table (Disconnect button
+      # and Host/MAC columns). Appended after the upstream rules so they win at
+      # equal specificity; the marker keeps this step idempotent.
+      - name: Apply Wi-Fi Table Fix (LESS)
+        id: modify_wireless
+        run: |
+          set -e
+          less_file="less/pages/wireless.less"
+          marker="argon-local: wifi assoc table fix"
+
+          if [ ! -f "$less_file" ]; then
+            echo "LESS file ($less_file) not found!"
+            exit 1
+          fi
+
+          if grep -q "$marker" "$less_file"; then
+            echo "Wi-Fi table fix already present."
+            echo "changed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          cat >> "$less_file" <<'EOF'
+
+          // argon-local: wifi assoc table fix
+          #wifi_assoclist_table {
+              // Keep "Disconnect" on one line: the action column is 1% wide, so the
+              // button defines its minimum width, and overflow-wrap: anywhere would
+              // shrink that to a single character.
+              .td > .cbi-dropdown:is(.btn, .cbi-button):not([multiple]) {
+                  min-width: max-content;
+
+                  > ul:not(.dropdown) > li {
+                      white-space: nowrap;
+                      overflow-wrap: normal;
+                  }
+              }
+
+              // Table layout only: keep MAC addresses intact and leave room for them.
+              @media screen and (min-width: 1153px) {
+                  > .tr > :is(.th, .td) {
+                      padding-inline: .75rem;
+                      overflow-wrap: break-word;
+                  }
+
+                  > .tr > :is(.th, .td):first-child {
+                      min-width: 10rem;
+                  }
+              }
+
+              @media screen and (min-width: 1400px) {
+                  > .tr > :is(.th, .td):first-child {
+                      min-width: 14rem;
+                  }
+              }
+
+              // Host cell: hostname on one line, "(ipv4, ipv6)" on the next.
+              > .tr > .td > span.hide-xs {
+                  display: block;
+              }
+          }
+          EOF
+
+          echo "Wi-Fi table fix applied."
+          echo "changed=true" >> $GITHUB_OUTPUT
+
       - name: Remove Footer Credits
         id: modify_footer
         run: |
@@ -113,14 +178,17 @@ jobs:
           fi
 
       - name: Show git diff
-        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true' || steps.rebuild_css.outputs.changed == 'true'
+        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true' || steps.modify_wireless.outputs.changed == 'true' || steps.rebuild_css.outputs.changed == 'true'
         run: git --no-pager diff --color
 
       - name: Commit and push changes
-        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true' || steps.rebuild_css.outputs.changed == 'true'
+        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true' || steps.modify_wireless.outputs.changed == 'true' || steps.rebuild_css.outputs.changed == 'true'
         run: |
           if [ "${{ steps.modify_font.outputs.changed }}" == "true" ]; then
             git add less/layout.less
+          fi
+          if [ "${{ steps.modify_wireless.outputs.changed }}" == "true" ]; then
+            git add less/pages/wireless.less
           fi
           if [ "${{ steps.rebuild_css.outputs.changed }}" == "true" ]; then
             git add htdocs/luci-static/argon/css/cascade.css
