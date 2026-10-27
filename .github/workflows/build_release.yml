@@ -105,7 +105,16 @@ jobs:
           FEED_DIR: ${{ github.workspace }}/feed
           NO_SHFMT_CHECK: 1
           NO_REFRESH_CHECK: 1
-          
+          V: s
+
+      - name: 📜 Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-${{ matrix.target }}-${{ matrix.version }}
+          path: logs/
+          if-no-files-found: ignore
+
       - name: 🔍 Debug build output
         run: |
           echo "=== Build directory structure ==="
