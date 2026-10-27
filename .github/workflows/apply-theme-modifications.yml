@@ -7,15 +7,13 @@ on:
       - 'ucode/template/themes/argon/footer.ut'
       - 'ucode/template/themes/argon/footer_login.ut'
       - 'htdocs/luci-static/argon/css/cascade.css'
-      - 'less/layout.less'
-      - 'Makefile'
+      - 'less/**'
   pull_request:
     paths:
       - 'ucode/template/themes/argon/footer.ut'
       - 'ucode/template/themes/argon/footer_login.ut'
       - 'htdocs/luci-static/argon/css/cascade.css'
-      - 'less/layout.less'
-      - 'Makefile'
+      - 'less/**'
 
 permissions:
   contents: write
@@ -34,43 +32,30 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Modify Brand Font Size (LESS & CSS)
+      - name: Modify Brand Font Size (LESS)
         id: modify_font
         run: |
           set -e
-          css_file="htdocs/luci-static/argon/css/cascade.css"
           less_file="less/layout.less"
-          
+
           if [ ! -f "$less_file" ]; then
             echo "LESS file ($less_file) not found!"
             exit 1
           fi
-          if [ ! -f "$css_file" ]; then
-            echo "CSS file not found!"
-            exit 1
-          fi
 
           before_less=$(md5sum "$less_file" | cut -d' ' -f1)
-          before_css=$(md5sum "$css_file" | cut -d' ' -f1)
 
           perl -0777 -pi -e 's/(\.sidenav-header\s*\{.*?\.brand\s*\{.*?font-size:\s*)1\.8rem;/${1}1\.5rem;/s' "$less_file"
-          perl -0777 -pi -e 's/(font-size:)1\.8rem;/${1}1\.5rem;/s' "$css_file"
-          
-          after_less=$(md5sum "$less_file" | cut -d' ' -f1)
-          after_css=$(md5sum "$css_file" | cut -d' ' -f1)
-          
 
-          changed="false"
+          after_less=$(md5sum "$less_file" | cut -d' ' -f1)
+
           if [ "$before_less" != "$after_less" ]; then
             echo "LESS file updated."
-            changed="true"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes needed for LESS."
+            echo "changed=false" >> $GITHUB_OUTPUT
           fi
-          if [ "$before_css" != "$after_css" ]; then
-            echo "CSS file updated."
-            changed="true"
-          fi
-          
-          echo "changed=$changed" >> $GITHUB_OUTPUT
 
       - name: Remove Footer Credits
         id: modify_footer
@@ -89,9 +74,9 @@ jobs:
           perl -0777 -pi -e 's/\s*<span class="footer-separator">\|<\/span>\s*<a href="https:\/\/github\.com\/jerrykuku\/luci-theme-argon"[^>]*>.*?<\/a>//s' "$f1"
 
           perl -ni -e 'print unless /<a\s[^>]*luci-theme-argon[^>]*>\s*ArgonTheme/' "$f2"
-          
+
           after=$(cat "$f1" "$f2" | md5sum | cut -d' ' -f1)
-          
+
           echo "before=$before" >> $GITHUB_OUTPUT
           echo "after=$after" >> $GITHUB_OUTPUT
 
@@ -103,52 +88,46 @@ jobs:
             echo "Changes applied."
           fi
 
-      - name: Modify Makefile Dependencies
-        id: modify_makefile
+      # cascade.css is compiled from less/ (upstream CI compares the two byte for
+      # byte), so rebuild it here instead of editing the compiled file by hand.
+      - name: Rebuild cascade.css from LESS
+        id: rebuild_css
         run: |
           set -e
-          makefile="Makefile"
-          if [ ! -f "$makefile" ]; then
-            echo "Makefile not found!"
-            exit 1
-          fi
+          css_file="htdocs/luci-static/argon/css/cascade.css"
 
-          before_hash=$(md5sum "$makefile" | cut -d' ' -f1)
+          npm install --global less@4.1.3
 
-          sed -i 's/LUCI_DEPENDS:=+wget +jsonfilter/LUCI_DEPENDS:=+wget-ssl +jsonfilter/g' "$makefile"
+          before_css=$(md5sum "$css_file" | cut -d' ' -f1)
 
-          if ! grep -q 'ucode-mod-math' "$makefile"; then
-            sed -i '/^LUCI_DEPENDS:=/ s/$/ +ucode-mod-math/' "$makefile"
-          fi
+          lessc less/cascade.less "$css_file"
 
-          after_hash=$(md5sum "$makefile" | cut -d' ' -f1)
+          after_css=$(md5sum "$css_file" | cut -d' ' -f1)
 
-          if [ "$before_hash" != "$after_hash" ]; then
+          if [ "$before_css" != "$after_css" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Makefile updated."
-            grep '^LUCI_DEPENDS' "$makefile"
+            echo "cascade.css rebuilt."
           else
             echo "changed=false" >> $GITHUB_OUTPUT
-            echo "No changes needed for Makefile."
+            echo "cascade.css already up to date."
           fi
 
       - name: Show git diff
-        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true' || steps.modify_makefile.outputs.changed == 'true'
+        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true' || steps.rebuild_css.outputs.changed == 'true'
         run: git --no-pager diff --color
 
       - name: Commit and push changes
-        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true' || steps.modify_makefile.outputs.changed == 'true'
+        if: steps.modify_font.outputs.changed == 'true' || steps.modify_footer.outputs.changed == 'true' || steps.rebuild_css.outputs.changed == 'true'
         run: |
           if [ "${{ steps.modify_font.outputs.changed }}" == "true" ]; then
             git add less/layout.less
+          fi
+          if [ "${{ steps.rebuild_css.outputs.changed }}" == "true" ]; then
             git add htdocs/luci-static/argon/css/cascade.css
           fi
           if [ "${{ steps.modify_footer.outputs.changed }}" == "true" ]; then
             git add ucode/template/themes/argon/footer.ut
             git add ucode/template/themes/argon/footer_login.ut
           fi
-          if [ "${{ steps.modify_makefile.outputs.changed }}" == "true" ]; then
-            git add Makefile
-          fi
-          git commit -m "chore: Apply theme and dependency modifications" || echo "No changes to commit"
+          git commit -m "chore: Apply theme modifications" || echo "No changes to commit"
           git push origin HEAD:master
