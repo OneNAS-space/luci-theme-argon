@@ -1,0 +1,27 @@
+diff --git a/ucode/template/themes/argon/footer.ut b/ucode/template/themes/argon/footer.ut
+index 58a5bdc..2f3855e 100644
+--- a/ucode/template/themes/argon/footer.ut
++++ b/ucode/template/themes/argon/footer.ut
+@@ -23,10 +23,6 @@
+ 
+ 				<span class="footer-separator">|</span>
+ 
+-				<a href="https://github.com/jerrykuku/luci-theme-argon" target="_blank">ArgonTheme {# vPKG_VERSION #}</a>
+-
+-				<span class="footer-separator">|</span>
+-
+ 				<a class="luci-link" href="{{ version.disturl }}" target="_blank">{{ version.distname }} {{ version.distversion }}-{{ version.distrevision }}</a>
+ 
+ 				<ul class="breadcrumb pull-right" id="modemenu" style="display:none"></ul>
+diff --git a/ucode/template/themes/argon/footer_login.ut b/ucode/template/themes/argon/footer_login.ut
+index d2e6142..0918ee7 100644
+--- a/ucode/template/themes/argon/footer_login.ut
++++ b/ucode/template/themes/argon/footer_login.ut
+@@ -24,7 +24,6 @@
+ <footer>
+ 	<div class="login-footer-links">
+ 		<a href="https://github.com/openwrt/luci" target="_blank" title="{{ entityencode(luci_info, true) }}">{{ split(version.luciname, ' (')[0] }}</a>
+-		<a href="https://github.com/jerrykuku/luci-theme-argon" target="_blank">ArgonTheme {# vPKG_VERSION #}</a>
+ 	</div>
+ 	<a href="{{ version.disturl }}" target="_blank" title="{{ entityencode(firmware_info, true) }}">{{ firmware_info }}</a>
+ </footer>
