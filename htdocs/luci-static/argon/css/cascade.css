@@ -3528,6 +3528,12 @@ body:not(.Interfaces) .cbi-rowstyle-2:first-child {
   padding-inline-end: 0.25rem;
   align-items: center;
 }
+.cbi-dropdown:not([multiple]):not(.btn):not(.cbi-button) {
+  padding-inline-end: 0;
+}
+.cbi-dropdown:not([multiple]):not(.btn):not(.cbi-button) > ul:not(.dropdown) > li {
+  padding-inline-start: 0;
+}
 .cbi-dropdown.btn > ul:not(.dropdown),
 .cbi-dropdown.cbi-button > ul:not(.dropdown) {
   margin: 0 0.75rem;

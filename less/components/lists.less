@@ -200,6 +200,17 @@
   align-items: center;
 }
 
+// Single-choice dropdowns and Comboboxes: use the same inner spacing as a
+// native select (12px text inset, chevron centred 16px from the padding edge),
+// instead of the extra .25em on the label and .25rem after the arrow.
+.cbi-dropdown:not([multiple]):not(.btn):not(.cbi-button) {
+  padding-inline-end: 0;
+
+  > ul:not(.dropdown) > li {
+    padding-inline-start: 0;
+  }
+}
+
 .cbi-dropdown.btn>ul:not(.dropdown),
 .cbi-dropdown.cbi-button>ul:not(.dropdown) {
   margin: 0 0.75rem;
