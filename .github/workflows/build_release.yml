@@ -6,9 +6,14 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'Makefile'
-      - '!**/.github/**'
+    # No path filter on purpose: the check job decides from the tag whether this
+    # version still needs a build. "Makefile changed in this push" is not a
+    # reliable signal (e.g. when main already had the new version before the sync).
+    paths-ignore:
+      - '.github/**'
+      - 'README*'
+      - 'LICENSE'
+      - 'SECURITY.md'
   workflow_dispatch:
 
 jobs:
