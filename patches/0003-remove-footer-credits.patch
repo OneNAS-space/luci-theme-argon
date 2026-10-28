@@ -1,27 +1,31 @@
 diff --git a/ucode/template/themes/argon/footer.ut b/ucode/template/themes/argon/footer.ut
-index 58a5bdc..2f3855e 100644
+index 58a5bdc..6e09826 100644
 --- a/ucode/template/themes/argon/footer.ut
 +++ b/ucode/template/themes/argon/footer.ut
-@@ -23,10 +23,6 @@
- 
- 				<span class="footer-separator">|</span>
- 
--				<a href="https://github.com/jerrykuku/luci-theme-argon" target="_blank">ArgonTheme {# vPKG_VERSION #}</a>
+@@ -19,11 +19,7 @@
+ 		</div>
+ 		<footer class="mobile-hide" style="text-wrap: auto">
+ 			<div class="footer-content" style="display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: end;">
+-				<a class="luci-link" href="https://github.com/openwrt/luci" target="_blank">Powered by {{ version.luciname }} ({{ version.luciversion }})</a>
 -
 -				<span class="footer-separator">|</span>
 -
- 				<a class="luci-link" href="{{ version.disturl }}" target="_blank">{{ version.distname }} {{ version.distversion }}-{{ version.distrevision }}</a>
+-				<a href="https://github.com/jerrykuku/luci-theme-argon" target="_blank">ArgonTheme {# vPKG_VERSION #}</a>
++				<a class="luci-link" href="https://github.com/openwrt/luci" target="_blank">{{ version.luciname }} ({{ version.luciversion }})</a>
  
- 				<ul class="breadcrumb pull-right" id="modemenu" style="display:none"></ul>
+ 				<span class="footer-separator">|</span>
 diff --git a/ucode/template/themes/argon/footer_login.ut b/ucode/template/themes/argon/footer_login.ut
-index d2e6142..0918ee7 100644
+index d2e6142..e76ba80 100644
 --- a/ucode/template/themes/argon/footer_login.ut
 +++ b/ucode/template/themes/argon/footer_login.ut
-@@ -24,7 +24,6 @@
+@@ -24,9 +24,8 @@
  <footer>
  	<div class="login-footer-links">
  		<a href="https://github.com/openwrt/luci" target="_blank" title="{{ entityencode(luci_info, true) }}">{{ split(version.luciname, ' (')[0] }}</a>
 -		<a href="https://github.com/jerrykuku/luci-theme-argon" target="_blank">ArgonTheme {# vPKG_VERSION #}</a>
  	</div>
- 	<a href="{{ version.disturl }}" target="_blank" title="{{ entityencode(firmware_info, true) }}">{{ firmware_info }}</a>
+-	<a href="{{ version.disturl }}" target="_blank" title="{{ entityencode(firmware_info, true) }}">{{ firmware_info }}</a>
++	<a href="{{ version.disturl }}" target="_blank" title="{{ entityencode(firmware_info, true) }}">{{ version.distname + ' ' + version.distversion }}</a>
  </footer>
+ </div>
+ </div>
