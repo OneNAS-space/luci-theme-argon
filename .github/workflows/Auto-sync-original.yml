@@ -112,10 +112,11 @@ jobs:
             ! -name '.github' \
             ! -name 'patches' \
             ! -name 'README*' \
+            ! -name 'SECURITY.md' \
             -exec rm -rf {} +
 
           echo "📥 Overlaying pristine upstream files from $OFFICIAL_BRANCH..."
-          git checkout "$OFFICIAL_BRANCH" -- . ':(exclude,glob)README*'
+          git checkout "$OFFICIAL_BRANCH" -- . ':(exclude,glob)README*' ':(exclude)SECURITY.md'
           # The sync marker belongs to the official branch only.
           git rm -f -q --cached .upstream_meta 2>/dev/null || true
           rm -f .upstream_meta
