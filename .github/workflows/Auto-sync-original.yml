@@ -27,7 +27,7 @@ env:
   # official_channel + patches/ applied + cascade.css rebuilt. This is what gets built.
   PATCHED_BRANCH: main
   # Same compiler as upstream's own CI, so unpatched output stays byte-identical.
-  LESS_VERSION: 4.1.3
+  LESS_VERSION: 4.9.1
 
 jobs:
   sync-and-patch:
