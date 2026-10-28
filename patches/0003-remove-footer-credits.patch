@@ -27,5 +27,3 @@ index d2e6142..e76ba80 100644
 -	<a href="{{ version.disturl }}" target="_blank" title="{{ entityencode(firmware_info, true) }}">{{ firmware_info }}</a>
 +	<a href="{{ version.disturl }}" target="_blank" title="{{ entityencode(firmware_info, true) }}">{{ version.distname + ' ' + version.distversion }}</a>
  </footer>
- </div>
- </div>
