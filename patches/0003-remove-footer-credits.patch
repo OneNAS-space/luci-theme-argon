@@ -14,6 +14,7 @@ index 58a5bdc..6e09826 100644
 +				<a class="luci-link" href="https://github.com/openwrt/luci" target="_blank">{{ version.luciname }} ({{ version.luciversion }})</a>
  
  				<span class="footer-separator">|</span>
+ 
 diff --git a/ucode/template/themes/argon/footer_login.ut b/ucode/template/themes/argon/footer_login.ut
 index d2e6142..e76ba80 100644
 --- a/ucode/template/themes/argon/footer_login.ut
@@ -27,3 +28,5 @@ index d2e6142..e76ba80 100644
 -	<a href="{{ version.disturl }}" target="_blank" title="{{ entityencode(firmware_info, true) }}">{{ firmware_info }}</a>
 +	<a href="{{ version.disturl }}" target="_blank" title="{{ entityencode(firmware_info, true) }}">{{ version.distname + ' ' + version.distversion }}</a>
  </footer>
+ </div>
+ </div>
