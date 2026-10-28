@@ -5,10 +5,9 @@ permissions:
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - 'Makefile'
-      - 'patches/**'
       - '!**/.github/**'
   workflow_dispatch:
 
@@ -74,35 +73,11 @@ jobs:
       - name: 🧾 Checkout repo
         uses: actions/checkout@v7
 
-      # Local modifications live in patches/ (git-style, applied in order) so the
-      # repository itself can stay identical to upstream. A patch that no longer
-      # applies fails the build instead of being silently skipped.
-      - name: 🩹 Apply theme patches
-        run: |
-          set -e
-          shopt -s nullglob
-          for p in patches/*.patch; do
-            echo "Applying $p"
-            if ! git apply --check "$p"; then
-              echo "::error file=$p::Patch no longer applies to this upstream version. Regenerate it."
-              exit 1
-            fi
-            git apply "$p"
-          done
-          git --no-pager diff --stat
-
-      # cascade.css is compiled from less/ (upstream CI compares them byte for
-      # byte), so rebuild it after patching the LESS sources.
-      - name: 🎨 Rebuild cascade.css from LESS
-        run: |
-          set -e
-          npm install --global less@4.9.1
-          lessc less/cascade.less htdocs/luci-static/argon/css/cascade.css
-
       - name: 📛 Set PKG_NAME
         run: echo "PKG_NAME=${{ github.event.repository.name }}" >> "$GITHUB_ENV"
 
-      # patches/ must not be copied into the package directory: OpenWrt applies a
+      # main already carries the patched sources (see Auto-sync-original.yml).
+      # patches/ must still stay out of the package directory: OpenWrt applies a
       # package's own patches/ to its build dir automatically.
       - name: 🧰 Set up LuCI feed structure
         run: |
