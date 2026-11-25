@@ -149,13 +149,21 @@ jobs:
           echo "Patches applied: $applied, skipped: $skipped"
           find . -name '*.orig' -not -path './.git/*' -delete
 
-      # cascade.css is compiled from less/ (upstream CI compares them byte for
-      # byte), so rebuild it after the LESS sources were patched.
-      - name: Rebuild cascade.css from LESS
+      # Compiled CSS (base/admin/cascade) and js-version are generated from
+      # less/ + resources (upstream CI compares them byte for byte), so rebuild
+      # them with upstream's own script after the LESS sources were patched.
+      # cascade.less needs @base-version/@admin-version, which only
+      # tools/build-theme-assets.sh supplies; a bare `lessc` call fails.
+      - name: Rebuild theme assets from LESS
         run: |
           set -e
           npm install --global "less@${LESS_VERSION}"
-          lessc less/cascade.less htdocs/luci-static/argon/css/cascade.css
+          if [ -f tools/build-theme-assets.sh ]; then
+            sh tools/build-theme-assets.sh
+          else
+            # Older upstream layout (single cascade.less, no version variables)
+            lessc less/cascade.less htdocs/luci-static/argon/css/cascade.css
+          fi
 
       - name: Commit and push to main
         run: |
