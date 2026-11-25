@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const template = fs.readFileSync(path.join(__dirname, '../ucode/template/themes/argon/login_background.ut'), 'utf8');
-const scriptMatch = template.match(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/i);
+const script = template.match(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/i);
 assert.ok(scriptMatch, 'login_background.ut must contain a <script> block');
 const script = scriptMatch[1];
 function fixture(reduced = false, blocked = false) {
