@@ -4,9 +4,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const template = fs.readFileSync(path.join(__dirname, '../ucode/template/themes/argon/login_background.ut'), 'utf8');
-const script = template.match(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/i);
-assert.ok(scriptMatch, 'login_background.ut must contain a <script> block');
-const script = scriptMatch[1];
+const scriptOpen = '<script>';
+const scriptStart = template.indexOf(scriptOpen);
+const scriptEnd = template.indexOf('</script', scriptStart + scriptOpen.length);
+assert.ok(scriptStart !== -1 && scriptEnd !== -1, 'login_background.ut must contain a <script> block');
+const script = template.slice(scriptStart + scriptOpen.length, scriptEnd);
 function fixture(reduced = false, blocked = false) {
  const video = Object.assign(new EventTarget(), { paused: true, muted: true,
   play() { if (blocked) return Promise.reject(Error('blocked'));this.paused = false;this.dispatchEvent(new Event('play'));return Promise.resolve(); },
