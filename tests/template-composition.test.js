@@ -170,8 +170,8 @@ test('anonymous login renders the alternate Bing image origin for old and new ca
 				settings: index === 0 ? { bing_background: '1' } : { online_wallpaper: 'bing' },
 				wallpaper: { url: 'https://' + host + imagePath }
 			});
-			assert.ok(html.includes('src="https://' + host + imagePath.replace('&', '&amp;') + '"'));
-			assert.ok(html.includes('data-mirror="https://' + hosts[1 - index] + imagePath.replace('&', '&amp;') + '"'));
+			assert.ok(html.includes('src="https://' + host + imagePath.replaceAll('&', '&amp;') + '"'));
+			assert.ok(html.includes('data-mirror="https://' + hosts[1 - index] + imagePath.replaceAll('&', '&amp;') + '"'));
 			assert.match(html, /data-fallback="\/luci-static\/argon\/img\/bg1\.webp"/);
 		}
 		const { html } = renderer.render('sysauth', {
