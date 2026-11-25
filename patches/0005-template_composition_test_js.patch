@@ -1,0 +1,24 @@
+From 5fe5f1a685be56316ea9a5bd8266ba6893de177f Mon Sep 17 00:00:00 2001
+From: Jackie Han <jackie.han@gmail.com>
+Date: Thu, 26 Nov 2026 07:16:59 +0800
+Subject: [PATCH] Update assertions to use replaceAll for HTML checks
+
+---
+ tests/template-composition.test.js | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tests/template-composition.test.js b/tests/template-composition.test.js
+index 591b734..7c2a059 100644
+--- a/tests/template-composition.test.js
++++ b/tests/template-composition.test.js
+@@ -170,8 +170,8 @@ test('anonymous login renders the alternate Bing image origin for old and new ca
+ 				settings: index === 0 ? { bing_background: '1' } : { online_wallpaper: 'bing' },
+ 				wallpaper: { url: 'https://' + host + imagePath }
+ 			});
+-			assert.ok(html.includes('src="https://' + host + imagePath.replace('&', '&amp;') + '"'));
+-			assert.ok(html.includes('data-mirror="https://' + hosts[1 - index] + imagePath.replace('&', '&amp;') + '"'));
++			assert.ok(html.includes('src="https://' + host + imagePath.replaceAll('&', '&amp;') + '"'));
++			assert.ok(html.includes('data-mirror="https://' + hosts[1 - index] + imagePath.replaceAll('&', '&amp;') + '"'));
+ 			assert.match(html, /data-fallback="\/luci-static\/argon\/img\/bg1\.webp"/);
+ 		}
+ 		const { html } = renderer.render('sysauth', {
